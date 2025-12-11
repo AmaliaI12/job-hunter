@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Job Hunter Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg mb-4 navbar-custom">
+    <div class="container d-flex justify-content-between">
+        <a class="navbar-brand navbar-brand-custom" href="/jobs">Job Hunter</a>
+
+        <button id="theme-toggle" class="btn btn-sm btn-light border-0" style="background: rgba(255,255,255,0.2); color: white;">
+            🌓 Schimba Tema
+        </button>
+    </div>
+</nav>
+
+<div class="container">
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card card-custom stat-card p-3">
+                <h5 class="text-uppercase" style="opacity: 0.8; font-size: 0.9rem;">Total Aplicari</h5>
+                <h2 th:text="${totalJobs}">0</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-custom stat-card p-3" style="border-left-color: var(--text-muted);">
+                <h5 class="text-uppercase" style="opacity: 0.8; font-size: 0.9rem;">Salariu Maxim</h5>
+                <h2 th:text="${maxSalary} + ' RON'">0 RON</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-custom stat-card p-3" style="border-left-color: var(--text-muted);">
+                <h5 class="text-uppercase" style="opacity: 0.8; font-size: 0.9rem;">Ultima aplicare</h5>
+                <h2 th:text="${lastApplication}">0 RON</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto"> <div class="card card-custom p-3 shadow-sm">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h4 class="card-title text-primary" style="color: var(--primary-color) !important;">Rata de Succes</h4>
+                    <p class="text-muted">Distribuția vizuală a aplicărilor tale în funcție de status.</p>
+                </div>
+
+                <div style="height: 200px; width: 200px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="card card-custom p-3 mb-4">
+        <form action="/jobs" method="get" class="row g-2 align-items-center">
+
+            <div class="col-lg-3 d-flex gap-2">
+                <a href="/jobs/new" class="btn btn-primary-custom flex-fill shadow text-truncate" title="Adauga Job Nou">
+                    + Adauga
+                </a>
+                <a href="/jobs/export" class="btn btn-success flex-fill shadow text-white text-truncate" style="background-color: #2e7d32;" title="Descarca CSV">
+                    Export to CSV
+                </a>
+            </div>
+
+            <div class="col-lg-2">
+                <select name="statusFilter" class="form-select text-truncate" onchange="this.form.submit()"
+                        style="border-color: var(--border-color); color: var(--text-main); background-color: var(--bg-card);">
+
+                    <option value="">Status</option>
+
+                    <option th:each="status : ${T(com.jobhunter.job_hunter.model.ApplicationStatus).values()}"
+                            th:value="${status}"
+                            th:text="${status}"
+                            th:selected="${status == selectedStatus}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="input-group">
+                    <input type="text" name="keyword" class="form-control"
+                           placeholder="Caută..."
+                           th:value="${keyword}"
+                           style="border-color: var(--border-color); background-color: var(--bg-card); color: var(--text-main);">
+                    <button type="submit" class="btn btn-outline-secondary" style="border-color: var(--border-color);">🔍</button>
+                </div>
+            </div>
+
+            <div class="col-lg-3 text-end">
+                <div class="btn-group w-100"> <a th:href="@{/jobs(sortBy='date', keyword=${keyword}, statusFilter=${selectedStatus})}"
+                                                 class="btn btn-sm btn-outline-secondary text-truncate" title="Sorteaza dupa Data">
+                    Data ↓
+                </a>
+                    <a th:href="@{/jobs(sortBy='salary', keyword=${keyword}, statusFilter=${selectedStatus})}"
+                       class="btn btn-sm btn-outline-secondary text-truncate" title="Sorteaza dupa Salariu">
+                        Salariu ↓
+                    </a>
+                    <a href="/jobs" class="btn btn-sm btn-outline-secondary" title="Reseteaza filtrele">
+                        Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="card card-custom">
+        <div class="card-header card-header-custom">
+            Lista Oportunități
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-custom mb-0">
+                <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Titlu Job</th>
+                    <th>Companie</th>
+                    <th>Status</th>
+                    <th>Salariu</th>
+                    <th>Acțiuni</th>
+                </tr>
+                </thead>
+                <tbody id="jobTableBody">
+                <tr th:each="job : ${jobs}" th:data-id="${job.id}" style="cursor: move;">
+                    <td class="text-center" style="color: var(--text-muted);">☰</td> <td th:text="${job.jobTitle}" class="fw-bold"></td>
+                    <td th:text="${job.companyName}"></td>
+                    <td>
+                        <span class="badge bg-secondary" th:text="${job.status}"></span>
+                        <div th:if="${job.isGhosted()}" class="mt-1">
+                            <span class="ghost-alert-text" title="Au trecut peste 14 zile fara raspuns!">
+                                Fara Raspuns
+                            </span>
+                            <br>
+                        </div>
+                    </td>
+                    <td th:text="${job.salaryOffer != null} ? ${job.salaryOffer} + ' RON' : 'N/A'"></td>
+                    <td>
+                        <button class="btn btn-sm btn-info text-white me-2"
+                                style="background-color: var(--primary-color); border: none;"
+                                data-bs-toggle="modal"
+                                data-bs-target="#detailsModal"
+                                th:data-title="${job.jobTitle}"
+                                th:data-company="${job.companyName}"
+                                th:data-date="${job.applicationDate}"
+                                th:data-status="${job.status}"
+                                th:data-salary="${job.salaryOffer}"
+                                th:data-link="${job.jobLink}"
+                                th:data-notes="${job.notes}">
+                            Detalii
+                        </button>
+
+                        <a th:href="@{/jobs/edit/{id}(id=${job.id})}" style="color: var(--text-muted); margin-right: 5px;">Edit</a>
+                        <a th:href="@{/jobs/delete/{id}(id=${job.id})}" class="text-danger fw-bold text-decoration-none" onclick="return confirm('Stergi?');">Sterge</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content card-custom">
+            <div class="modal-header card-header-custom">
+                <h5 class="modal-title" id="modalJobTitle">Detalii Job</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5 id="modalCompany" class="text-primary mb-3" style="color: var(--primary-color) !important;">Companie</h5>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <strong>Status:</strong> <span id="modalStatus" class="badge bg-secondary"></span>
+                    </div>
+                    <div class="col-6">
+                        <strong>Data:</strong> <span id="modalDate"></span>
+                    </div>
+                </div>
+
+                <p><strong>Salariu Oferit:</strong> <span id="modalSalary"></span></p>
+
+                <hr style="border-color: var(--border-color);">
+
+                <p><strong>Descriere / Notițe:</strong></p>
+                <div id="modalNotes" class="p-3 mb-3" style="background: rgba(0,0,0,0.05); border-radius: 5px; border: 1px solid var(--border-color); white-space: pre-wrap;"></div>
+
+                <p><strong>Link Anunț:</strong></p>
+                <a id="modalLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary w-100" style="border-color: var(--primary-color); color: var(--text-main);">
+                    🔗 Accesează Anunțul Oficial
+                </a>
+                <span id="noLinkMsg" class="text-muted d-block text-center mt-2" style="display:none;">Nu există link salvat.</span>
+            </div>
+            <div class="modal-footer" style="border-top-color: var(--border-color);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Închide</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="mt-5 py-4 text-center footer-custom">
+    <div class="container">
+        <hr class="mb-4" style="border-color: var(--border-color); opacity: 0.3; width: 50%; margin: 0 auto;">
+
+        <p class="fst-italic mb-3" style="font-size: 1.1rem; color: var(--navbar-text);">
+            <span>Fiecare 'NU' primit te aduce mai aproape de acel 'DA' perfect.</span>
+        </p>
+
+        <small style="color: var(--navbar-text); opacity: 0.7;">
+            &copy; 2025 <strong>Job Hunter Pro</strong>.
+            Dezvoltat cu Java☕ și Spring Boot de <span>Ionescu Amalia</span>.
+        </small>
+
+        <br>
+
+        <div class="mt-2">
+            <a href="#" class="text-decoration-none me-2 footer-link">LinkedIn</a>
+            <span style="color: var(--border-color);">|</span>
+            <a href="#" class="text-decoration-none ms-2 footer-link">GitHub</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+    const toggleButton = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme');
+
+    if (currentTheme) {
+        document.documentElement.setAttribute('data-theme', currentTheme);
+    }
+
+    toggleButton.addEventListener('click', () => {
+        let theme = document.documentElement.getAttribute('data-theme');
+
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        }
+    });
+</script>
+
+
+<script>
+    const detailsModal = document.getElementById('detailsModal');
+
+    if (detailsModal) {
+        detailsModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+
+            const title = button.getAttribute('data-title');
+            const company = button.getAttribute('data-company');
+            const date = button.getAttribute('data-date');
+            const status = button.getAttribute('data-status');
+            const salary = button.getAttribute('data-salary');
+            const link = button.getAttribute('data-link');
+            const notes = button.getAttribute('data-notes');
+
+            document.getElementById('modalJobTitle').textContent = title;
+            document.getElementById('modalCompany').textContent = company;
+            document.getElementById('modalDate').textContent = date;
+            document.getElementById('modalStatus').textContent = status;
+
+            const salaryElem = document.getElementById('modalSalary');
+            if (salary && salary !== 'null') {
+                salaryElem.textContent = salary + ' RON';
+            } else {
+                salaryElem.textContent = 'N/A';
+            }
+
+            document.getElementById('modalNotes').textContent = notes || "Nu există descriere.";
+
+            const linkElem = document.getElementById('modalLink');
+            const noLinkMsg = document.getElementById('noLinkMsg');
+
+            if (link && link.trim() !== "") {
+                linkElem.href = link;
+                linkElem.style.display = 'inline-block';
+                noLinkMsg.style.display = 'none';
+            } else {
+                linkElem.style.display = 'none';
+                noLinkMsg.style.display = 'block';
+            }
+        });
+    }
+</script>
+
+<script>
+    const tbody = document.getElementById('jobTableBody');
+
+    if (tbody) {
+        new Sortable(tbody, {
+            animation: 150,
+            handle: 'tr',
+            ghostClass: 'bg-light',
+
+            onEnd: function (evt) {
+                let rows = tbody.querySelectorAll('tr');
+                let ids = [];
+
+                rows.forEach(row => ids.push(row.getAttribute('data-id')));
+
+                fetch('/jobs/reorder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ids)
+                }).then(response => {
+                    console.log("Ordinea a fost salvata cu succes!");
+                }).catch(error => {
+                    console.error("Eroare la salvarea ordinii:", error);
+                });
+            }
+        });
+    }
+</script>
+
+<script th:inline="javascript">
+    const statsData = [[${statusStats}]];
+
+    if (statsData) {
+        const ctx = document.getElementById('statusChart').getContext('2d');
+
+        const colorMap = {
+            'APLICAT': '#6c757d',        // Gri
+            'INTERVIU_HR': '#0dcaf0',    // Bleu
+            'INTERVIU_TEHNIC': '#ffc107',// Galben
+            'OFERTA_PRIMITA': '#198754', // Verde
+            'RESPINS': '#dc3545'         // Rosu
+        };
+
+        const labels = Object.keys(statsData);
+        const dataValues = Object.values(statsData);
+
+        const backgroundColors = labels.map(label => colorMap[label] || '#6c757d');
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            color: '#888',
+                            boxWidth: 10
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
