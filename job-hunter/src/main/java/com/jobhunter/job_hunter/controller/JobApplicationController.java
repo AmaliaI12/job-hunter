@@ -15,16 +15,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-/** Clasa pentru gestionarea cererilor web legate de Job Applications
+/** Clasa pentru gestionarea interactiunii dintre browser si baza de date
  * @author Ionescu Amalia
  * @version 10 Decembrie 2025
  */
 
 @Controller
-@RequestMapping("/jobs")
+@RequestMapping("/jobs") // Toate link-urile din clasa vor incepe cu /jobs
 public class JobApplicationController {
 
-    @Autowired
+    @Autowired // Creeaza automat Service-ul
     private JobApplicationService jobService;
 
     @GetMapping
@@ -50,21 +50,27 @@ public class JobApplicationController {
         model.addAttribute("jobs", jobs);
         model.addAttribute("keyword", keyword);
 
+        // Statistici
         model.addAttribute("totalJobs", jobs.size());
         model.addAttribute("maxSalary", jobService.getMaxSalary(jobs));
         model.addAttribute("lastApplication", jobService.getLastApplicationDate(jobs));
+
         model.addAttribute("selectedStatus", statusFilter);
+
+        // Datele pentru pie chart
         model.addAttribute("statusStats", jobService.getStatusStatistics());
 
         return "job-list";
     }
 
+    // Formular adaugare
     @GetMapping("/new")
     public String showAddForm(Model model) {
         model.addAttribute("job", new JobApplication());
         return "job-form";
     }
 
+    // Salvare job
     @PostMapping("/save")
     public String saveJob(@Valid @ModelAttribute("job") JobApplication job,
                           BindingResult result,
@@ -91,7 +97,7 @@ public class JobApplicationController {
     }
 
     @PostMapping("/reorder")
-    @ResponseBody
+    @ResponseBody // nu returneaza o pagina html
     public void reorderJobs(@RequestBody List<Long> sortedIds) {
         jobService.updateJobPositions(sortedIds);
     }
@@ -99,16 +105,18 @@ public class JobApplicationController {
 
     @GetMapping("/export")
     public void exportToCSV(HttpServletResponse response) throws IOException {
+        // tip fisier = csv
         response.setContentType("text/csv");
         String headerKey = "Content-Disposition";
-        String headerValue = "attachment; filename=joburi_mele.csv";
+        // Deschide fereastra "Save As"
+        String headerValue = "attachment; filename=joburi.csv";
         response.setHeader(headerKey, headerValue);
 
         List<JobApplication> listJobs = jobService.getAllJobs();
 
         PrintWriter writer = response.getWriter();
 
-        writer.println("ID,Titlu Job,Companie,Data Aplicarii,Status,Salariu,Link");
+        writer.println("ID,Titlu Job,Companie,Data Aplicarii,Status,Salariu,Link,Descriere");
 
         for (JobApplication job : listJobs) {
             writer.println(
@@ -118,7 +126,8 @@ public class JobApplicationController {
                             job.getApplicationDate() + "," +
                             job.getStatus() + "," +
                             (job.getSalaryOffer() != null ? job.getSalaryOffer() : "0") + "," +
-                            (job.getJobLink() != null ? job.getJobLink() : "")
+                            (job.getJobLink() != null ? job.getJobLink() : "")  + "," +
+                            (job.getNotes() != null ? job.getNotes() : "")
             );
         }
     }

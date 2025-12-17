@@ -15,7 +15,7 @@
         <a class="navbar-brand navbar-brand-custom" href="/jobs">Job Hunter</a>
 
         <button id="theme-toggle" class="btn btn-sm btn-light border-0" style="background: rgba(255,255,255,0.2); color: white;">
-            🌓 Schimba Tema
+            ☼
         </button>
     </div>
 </nav>
@@ -48,7 +48,7 @@
             <div class="card-body d-flex align-items-center justify-content-between">
                 <div>
                     <h4 class="card-title text-primary" style="color: var(--primary-color) !important;">Rata de Succes</h4>
-                    <p class="text-muted">Distribuția vizuală a aplicărilor tale în funcție de status.</p>
+                    <p class="text-muted">Distributia vizuala a aplicarilor tale in functie de status.</p>
                 </div>
 
                 <div style="height: 200px; width: 200px;">
@@ -88,7 +88,7 @@
             <div class="col-lg-4">
                 <div class="input-group">
                     <input type="text" name="keyword" class="form-control"
-                           placeholder="Caută..."
+                           placeholder="Cauta..."
                            th:value="${keyword}"
                            style="border-color: var(--border-color); background-color: var(--bg-card); color: var(--text-main);">
                     <button type="submit" class="btn btn-outline-secondary" style="border-color: var(--border-color);">🔍</button>
@@ -113,7 +113,7 @@
     </div>
     <div class="card card-custom">
         <div class="card-header card-header-custom">
-            Lista Oportunități
+            Lista Oportunitati
         </div>
         <div class="card-body p-0">
             <table class="table table-custom mb-0">
@@ -124,7 +124,7 @@
                     <th>Companie</th>
                     <th>Status</th>
                     <th>Salariu</th>
-                    <th>Acțiuni</th>
+                    <th>Actiuni</th>
                 </tr>
                 </thead>
                 <tbody id="jobTableBody">
@@ -194,12 +194,12 @@
 
                 <p><strong>Link Anunț:</strong></p>
                 <a id="modalLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary w-100" style="border-color: var(--primary-color); color: var(--text-main);">
-                    🔗 Accesează Anunțul Oficial
+                    🔗 Acceseaza Anuntul Oficial
                 </a>
-                <span id="noLinkMsg" class="text-muted d-block text-center mt-2" style="display:none;">Nu există link salvat.</span>
+                <span id="noLinkMsg" class="text-muted d-block text-center mt-2" style="display:none;">Nu exista link salvat.</span>
             </div>
             <div class="modal-footer" style="border-top-color: var(--border-color);">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Închide</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Inchide</button>
             </div>
         </div>
     </div>
@@ -214,16 +214,16 @@
         </p>
 
         <small style="color: var(--navbar-text); opacity: 0.7;">
-            &copy; 2025 <strong>Job Hunter Pro</strong>.
-            Dezvoltat cu Java☕ și Spring Boot de <span>Ionescu Amalia</span>.
+            &copy; 2025 <strong>Job Hunter</strong>.
+            Dezvoltat cu Java☕ si Spring Boot de <span>Ionescu Amalia</span>.
         </small>
 
         <br>
 
         <div class="mt-2">
-            <a href="#" class="text-decoration-none me-2 footer-link">LinkedIn</a>
+            <a href="https://www.linkedin.com/in/amalia-ionescu-580a202a7/" class="text-decoration-none me-2 footer-link">LinkedIn</a>
             <span style="color: var(--border-color);">|</span>
-            <a href="#" class="text-decoration-none ms-2 footer-link">GitHub</a>
+            <a href="https://github.com/AmaliaI12" class="text-decoration-none ms-2 footer-link">GitHub</a>
         </div>
     </div>
 </footer>
@@ -232,19 +232,34 @@
     const toggleButton = document.getElementById('theme-toggle');
     const currentTheme = localStorage.getItem('theme');
 
+    const updateIcon = (theme) => {
+        if (theme === 'dark') {
+            toggleButton.textContent = '☼';
+        } else {
+            toggleButton.textContent = '☾';
+        }
+    };
+
     if (currentTheme) {
         document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+    } else {
+        updateIcon('light');
     }
 
     toggleButton.addEventListener('click', () => {
         let theme = document.documentElement.getAttribute('data-theme');
 
         if (theme === 'dark') {
+            // Trecem la Light Mode
             document.documentElement.setAttribute('data-theme', 'light');
             localStorage.setItem('theme', 'light');
+            updateIcon('light');
         } else {
+            // Trecem la Dark Mode
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem('theme', 'dark');
+            updateIcon('dark');
         }
     });
 </script>
@@ -277,7 +292,7 @@
                 salaryElem.textContent = 'N/A';
             }
 
-            document.getElementById('modalNotes').textContent = notes || "Nu există descriere.";
+            document.getElementById('modalNotes').textContent = notes || "Nu exista descriere.";
 
             const linkElem = document.getElementById('modalLink');
             const noLinkMsg = document.getElementById('noLinkMsg');
@@ -332,11 +347,11 @@
         const ctx = document.getElementById('statusChart').getContext('2d');
 
         const colorMap = {
-            'APLICAT': '#6c757d',        // Gri
-            'INTERVIU_HR': '#0dcaf0',    // Bleu
-            'INTERVIU_TEHNIC': '#ffc107',// Galben
-            'OFERTA_PRIMITA': '#198754', // Verde
-            'RESPINS': '#dc3545'         // Rosu
+            'APLICAT': '#6c757d',
+            'INTERVIU_HR': '#0dcaf0',
+            'INTERVIU_TEHNIC': '#ffc107',
+            'OFERTA_PRIMITA': '#198754',
+            'RESPINS': '#dc3545'
         };
 
         const labels = Object.keys(statsData);

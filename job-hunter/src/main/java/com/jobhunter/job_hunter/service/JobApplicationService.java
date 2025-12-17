@@ -52,7 +52,8 @@ public class JobApplicationService {
     }
 
     public List<JobApplication> filterByStatus(ApplicationStatus status) {
-        if (status == null) return repository.findAll();
+        if (status == null)
+            return repository.findAll();
         return repository.findByStatus(status);
     }
 
@@ -69,7 +70,8 @@ public class JobApplicationService {
     }
 
     public Double getMaxSalary(List<JobApplication> jobs) {
-        if (jobs == null || jobs.isEmpty()) return 0.0;
+        if (jobs == null || jobs.isEmpty())
+            return 0.0;
         double max = 0.0;
         for (JobApplication job : jobs) {
             if (job.getSalaryOffer() != null && job.getSalaryOffer() > max) {
@@ -85,7 +87,6 @@ public class JobApplicationService {
         }
 
         LocalDate mostRecent = null;
-
         for (JobApplication job : jobs) {
             LocalDate currentDate = job.getApplicationDate();
             if (currentDate != null) {
@@ -95,7 +96,9 @@ public class JobApplicationService {
             }
         }
 
-        return (mostRecent != null) ? mostRecent.toString() : "N/A";
+        if (mostRecent != null)
+            return mostRecent.toString();
+        return "N/A";
     }
 
     public Map<String, Long> getStatusStatistics() {

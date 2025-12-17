@@ -6,7 +6,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
-/** Clasa pentru definirea entitatii JobApplication
+/** Clasa pentru definirea JobApplication
  * @author Ionescu Amalia
  * @version 10 Decembrie 2025
  */
