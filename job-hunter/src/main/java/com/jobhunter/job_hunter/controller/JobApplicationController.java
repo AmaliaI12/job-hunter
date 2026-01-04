@@ -17,7 +17,7 @@ import java.io.PrintWriter;
 
 /** Clasa pentru gestionarea interactiunii dintre browser si baza de date
  * @author Ionescu Amalia
- * @version 10 Decembrie 2025
+ * @version 4 Ianuarie 2026
  */
 
 @Controller

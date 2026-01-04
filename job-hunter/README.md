@@ -1,84 +1,34 @@
 # Job Hunter
 
-**Job Hunter** este o aplicatie web ce foloseste **Spring Boot 3**, **Thymeleaf** si **JPA**, care nu doar stocheaza datele, dar ofera si statistici vizuale si alerte inteligente.
+**Job Hunter** este o aplicație web de tip *Application Tracking System (ATS)* personal, dezvoltată folosind **Spring Boot 3**, **Thymeleaf** și **MS SQL Server** care are ca scop facilitarea procesului de căutare a unui loc de muncă. Aplicația oferă o imagine de ansamblu asupra oportunităților, statistici în timp real și alerte inteligente pentru situațiile de lipsă de răspuns.
 
-## Tehnologii folosite
+## Tehnologii Utilizate
 
-- Java Spring Boot
-- Thymeleaf
-- Bootstrap 5
-- JavaScript (Vanilla + Libraries)
+* **Backend:** Java 21, Spring Boot 3.4 (Web, Data JPA, Validation).
+* **Database:** Microsoft SQL Server (MSSQL).
+* **Frontend:** Thymeleaf (Server-Side Rendering), Bootstrap 5, CSS3 Custom Properties.
+* **JavaScript:** Vanilla JS, Chart.js (Vizualizare date), Sortable.js (Drag & Drop).
+* **Build Tool:** Maven.
 
+---
 
-## 1. Arhitectura Aplicatiei (MVC)
+## Backend: Arhitectură și Logică de Business
 
-Aplicatia urmeaza modelul clasic **Model-View-Controller (MVC)**, asigurand o separare clara a responsabilitatilor:
+Aplicația este construită pe o arhitectură **MVC (Model-View-Controller)**, cu o separare strictă a logicii de business de interfața utilizator.
 
-- **Model:** `JobApplication` (entitatea de baza)
-- **View:** sabloane Thymeleaf (interfata HTML)
-- **Controller:** `JobApplicationController` (gestioneaza cererile HTTP)
-- **Service & Repository:** logica de business si pastrarea datelor
+### 1. Modelul de Date și Validare
 
-### Structura proiectului
+Entitățile sunt protejate împotriva datelor inconsistente folosind **Jakarta Validation**.
 
-```text
-com.jobhunter.job_hunter
-├── controller/
-├── model/
-├── repository/
-├── service/
-└── JobHunterApplication.java
-```
+* **Enum Strict:** Statusul aplicației este gestionat printr-un `enum` (`ApplicationStatus`) pentru a garanta consistența datelor (APLICAT, INTERVIU_HR, OFERTA_PRIMITA etc.) și a preveni erorile de tip "magic strings".
+* **Validări:** `@NotBlank`, `@PastOrPresent` asigură integritatea datelor înainte de a ajunge în baza de date.
 
-## 2. Modelul de Date
+### 2. Algoritmul "Ghosting Detector"
 
-Inima aplicatiei este clasa `JobApplication`. Nu am creat doar o structura de date simpla, ci am integrat Jakarta Validation pentru a asigura integritatea datelor direct de la sursa.
+O funcționalitate cheie implementată în clasa de model este detectarea automată a joburilor unde compania nu a răspuns.
 
-```java
-@Entity
-@Table(name = "JobsTable")
-public class JobApplication {
-
-    @NotBlank(message = "Titlul jobului este obligatoriu")
-    private String jobTitle;
-
-    @NotBlank(message = "Numele companiei este obligatoriu")
-    private String companyName;
-
-    @NotNull(message = "Data aplicarii este obligatorie")
-    @PastOrPresent(message = "Data nu poate fi in viitor")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private LocalDate applicationDate;
-
-    @NotNull(message = "Trebuie sa selectezi un status")
-    @Enumerated(EnumType.STRING)
-    private ApplicationStatus status;
-
-    // gettere si settere
-}
-```
-
-In loc sa folosesc string-uri libere („Aplicat”, „aplicat”, „interviu”), am definit un enum strict `ApplicationStatus`. Acest lucru permite:
-
-- gruparea usoara a statisticilor
-
-- prevenirea erorilor de tastare
-
-- coerenta la nivel de baza de date
-
-```java
-public enum ApplicationStatus {
-    APLICAT,
-    INTERVIU_HR,
-    INTERVIU_TEHNIC,
-    OFERTA_PRIMITA,
-    RESPINS
-}
-```
-
-## 3. Functionalitatea „Ghosting Detector”
-
-Una dintre cele mai interesante functionalitati este detectarea lipsei de raspuns (_„ghosting”_). Daca au trecut mai mult de 14 zile de la aplicare si statusul este inca _APLICAT_, aplicatia marcheaza automat jobul ca fiind cu risc de ghosting.
+* **Logica:** Dacă au trecut mai mult de **14 zile** de la aplicare și statusul a rămas neschimbat (*APLICAT*), jobul este marcat intern ca fiind cu risc de "ghosting".
+* **Implementare:** Utilizarea `ChronoUnit.DAYS` pentru calculul diferenței de timp între `LocalDate.now()` și data aplicării.
 
 ```java
 public boolean isGhosted() {
@@ -90,13 +40,11 @@ public boolean isGhosted() {
 }
 ```
 
-Acest boolean virtual (`isGhosted`) este utilizat ulterior in Thymeleaf pentru a afisa o alerta vizuala in tabel.
+### 3. Statistici Avansate cu Java Streams
 
-## 4. Logica de Business si Statistici (Streams API)
+Stratul de Service (`JobApplicationService`) utilizează **Java Streams API** pentru a procesa datele în memorie și a genera statistici pentru dashboard, reducând încărcarea pe baza de date pentru operațiuni de agregare simple.
 
-Service-ul (`JobApplicationService.java`) nu este doar un intermediar catre baza de date. Aici este implementata logica de calcul pentru dashboard.
-
-Un exemplu relevant de utilizare a Java Streams este generarea datelor pentru un grafic de tip Pie Chart. Se grupeaza joburile dupa status si se numara intr-o singura linie de cod:
+* **Exemplu:** Gruparea joburilor după status pentru generarea graficelor.
 
 ```java
 public Map<String, Long> getStatusStatistics() {
@@ -108,229 +56,94 @@ public Map<String, Long> getStatusStatistics() {
 }
 ```
 
-Tot in Service sunt calculate si alte informatii, precum:
+### 4. Filtrare Dinamică și Export
 
-- salariul maxim
+Controller-ul gestionează cereri complexe cu parametri opționali, permițând utilizatorului să combine filtrele:
 
-- ultima aplicare
+* **Filtrare dupa mai multe criterii:** Căutare după nume (`keyword`), filtrare după `status` și sortare (`sortBy`) într-un singur request.
+* **Export CSV:** Funcționalitate nativă de generare a rapoartelor CSV direct din `HttpServletResponse`, fără stocare intermediară pe disc.
 
-## 5. Controller-ul
+---
 
-Clasa `JobApplicationController` gestioneaza rutele si filtrele. O provocare este gestionarea mai multor filtre simultan (cautare dupa nume, filtrare dupa status, sortare).
+## Gestionarea Bazei de Date (MS SQL Server)
 
-Aceasta problema a fost rezolvata prin verificari succesive in metoda `listJobs`:
+Persistența datelor este asigurată de **Spring Data JPA** conectat la o instanță **Microsoft SQL Server**.
 
-```java
-@GetMapping
-public String listJobs(Model model,
-                       @RequestParam(required = false) ApplicationStatus statusFilter,
-                       @RequestParam(required = false) String sortBy,
-                       @RequestParam(required = false) String keyword) {
+* **Configurare Dialect:** Optimizat pentru MSSQL folosind dialectul specific Hibernate.
+* **Schema Generation:** Tabelele sunt generate și actualizate automat (`hibernate.ddl-auto=update`), mapând Enum-urile Java la coloane de tip `VARCHAR` pentru lizibilitate directă în baza de date.
+* **Interogări:** Utilizarea `JpaRepository` pentru operațiuni CRUD standard și interogări derivate din numele metodelor (ex: `findByCompanyNameContainingIgnoreCase`).
 
-    List<JobApplication> jobs;
+---
 
-    if (keyword != null && !keyword.isEmpty()) {
-        jobs = jobService.searchByCompany(keyword);
-    } else if (statusFilter != null) {
-        jobs = jobService.filterByStatus(statusFilter);
-    } else if ("salary".equals(sortBy)) {
-        jobs = jobService.sortBySalaryDesc();
-    } else {
-        jobs = jobService.getAllJobs();
-    }
+## Frontend & UX
 
-    // adaugare atribute in Model pentru UI
-    return "job-list";
-}
-```
+Interfața este randată pe server folosind **Thymeleaf**, completată de JavaScript pentru interactivitate dinamică.
 
-Astfel, URL-ul devine dinamic, de exemplu:
+### 1. **Dashboard Interactiv:**
+
+* Injectarea datelor din Java direct în JavaScript (`th:inline="javascript"`) pentru a alimenta graficele **Chart.js**.
+* Carduri de statistici calculate în backend (Total Joburi, Rata de răspuns).
+
+### 2. **Zero-Fetch Modals:** 
+
+Detaliile joburilor sunt încărcate instantaneu folosind `data-attributes` HTML populate de Thymeleaf, eliminând necesitatea unor request-uri AJAX suplimentare la deschiderea modalei.
+
+### 3. **Dropdown Dinamic:**
+
+Elementele `<option>` sunt generate iterând direct peste valorile `ApplicationStatus.values()` din Java, asigurând sincronizarea automată între Backend și Frontend.
+
+### 4. **Drag & Drop (Sortable.js):** 
+
+Permite prioritizarea vizuală a joburilor, cu persistența noii ordini printr-un apel asincron către API-ul `/jobs/reorder`.
+
+### 5. **Sistem Dark Mode:** 
+
+Implementat folosind variabile CSS și `localStorage` pentru persistența preferințelor utilizatorului.
+
+### 6. **Responsive Design:** 
+
+Interfața se adaptează pentru desktop și mobil, folosind sistemul Grid din Bootstrap 5.
+
+---
+
+## Structura Proiectului
 
 ```text
-/jobs?statusFilter=INTERVIU_HR&sortBy=date
+com.jobhunter.job_hunter
+├── controller/       # Gestionare Request-uri HTTP & Export CSV
+├── model/            # Entități JPA, Enums & Validări
+├── repository/       # Interfețe Spring Data JPA (MSSQL)
+├── service/          # Logică de business (Streams, Calcule)
+└── JobHunterApplication.java
 ```
 
-## 6. Exportul Datelor: Generarea CSV
+## Planuri de Viitor
 
-Pentru a permite utilizatorului sa isi exporte datele, am implementat o functie de generare CSV direct in Controller. Fisierul este livrat direct in browser, fara a fi salvat pe server.
+* [ ] Implementarea **Spring Security** pentru autentificare și autorizare.
+* [ ] Stocarea CV-urilor (File Upload) în baza de date sau Cloud Storage.
+* [ ] Trimiterea automată de email-uri de follow-up (JavaMailSender).
+* [ ] Migrarea către o arhitectură REST API + React/Angular (opțional).
 
-```java
-@GetMapping("/export")
-public void exportToCSV(HttpServletResponse response) throws IOException {
-    response.setContentType("text/csv");
-    response.setHeader("Content-Disposition", "attachment; filename=joburi.csv");
 
-    PrintWriter writer = response.getWriter();
-    writer.println("ID,Titlu Job,Companie,Data,Status,Salariu");
+## ⚙️ Configurare și Rulare
 
-    for (JobApplication job : jobService.getAllJobs()) {
-        // scrierea liniilor si gestionarea caracterelor speciale
-    }
-}
+1. **Cerințe:**
+* Java 21 JDK
+* Microsoft SQL Server (instanță locală sau Docker)
+* Maven
+
+
+2. **Configurare Bază de Date:**
+Actualizează fișierul `src/main/resources/application.properties`:
+```properties
+spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=JobDatabase;...
+spring.datasource.username=userul_tau
+spring.datasource.password=parola_ta
 ```
 
-## Arhitectura Frontend: Dashboard-ul (`job-list.html`)
-
-Pagina principală nu este doar un tabel static; este un dashboard interactiv. Am ales o abordare hibridă: HTML generat pe server pentru viteza, plus JavaScript pentru interactivitate dinamică.
-
-### 6.1. Cardurile de Statistici
-
-Scop: Oferirea unei viziuni de ansamblu instantanee asupra progresului.
-
-Implementare: Folosim `th:text` pentru a injecta variabile calculate în backend (`totalJobs`, `maxSalary`).
-
-Design Decision: Am folosit CSS Custom Properties (variabile CSS) precum `var(--text-muted)` pentru borduri și text.
-
-Acest lucru permite schimbarea temei (Dark/Light) instantaneu, modificând doar valorile variabilelor în CSS, fără a schimba HTML-ul.
-
-### 1.2. Vizualizare Date: Chart.js Integration
-
-O reprezentare vizuală a distribuției statusurilor (Pie/Doughnut Chart).
-
-Provocare: Cum trimitem datele din Java (Map<String, Long>) în JavaScript-ul care desenează graficul?
-
-Soluție: Thymeleaf Inlining (th:inline="javascript").
-
-```JavaScript
-// Thymeleaf convertește automat Map-ul Java într-un obiect JSON valid
-const statsData = [[${statusStats}]];
+3. **Rulare:**
+```bash
+mvn spring-boot:run
 ```
 
-1.4. Modala de Detalii (Zero-Fetch Strategy)
-Scop: Afișarea notițelor extinse fără a reîncărca pagina.
-
-Design Decision: În loc să facem un request AJAX către server când utilizatorul apasă "Detalii" (ceea ce ar fi lent), am stocat toate datele necesare în Data Attributes (data-*) direct pe buton.
-
-Implementare:
-
-HTML
-
-<button ... 
-    th:data-title="${job.jobTitle}"
-    th:data-notes="${job.notes}">
-    Detalii
-</button>
-JavaScript: Un EventListener pe deschiderea modalei citește aceste atribute și populează câmpurile din modală instantaneu.
-
-Avantaj: Viteză instantanee pentru utilizator.
-
-Dezavantaj: HTML-ul este puțin mai mare, dar neglijabil pentru text.
-
-1.5. Drag & Drop Reordering (Sortable.js)
-Scop: Utilizatorul vrea să își prioritizeze vizual joburile.
-
-Tehnologie: Librăria Sortable.js.
-
-Persistență: Doar mutarea vizuală nu este suficientă. La finalul mutării (onEnd), declanșăm un fetch (POST) către endpoint-ul /jobs/reorder cu noua listă de ID-uri.
-
-Snippet:
-
-JavaScript
-
-onEnd: function (evt) {
-    // Colectează ordinea nouă a ID-urilor
-    rows.forEach(row => ids.push(row.getAttribute('data-id')));
-    // Trimite la server fără refresh
-    fetch('/jobs/reorder', { body: JSON.stringify(ids) ... });
-}
-
-1.4. Modala de Detalii (Zero-Fetch Strategy)
-Scop: Afișarea notițelor extinse fără a reîncărca pagina.
-
-Design Decision: În loc să facem un request AJAX către server când utilizatorul apasă "Detalii" (ceea ce ar fi lent), am stocat toate datele necesare în Data Attributes (data-*) direct pe buton.
-
-Implementare:
-
-HTML
-
-<button ... 
-    th:data-title="${job.jobTitle}"
-    th:data-notes="${job.notes}">
-    Detalii
-</button>
-JavaScript: Un EventListener pe deschiderea modalei citește aceste atribute și populează câmpurile din modală instantaneu.
-
-Avantaj: Viteză instantanee pentru utilizator.
-
-Dezavantaj: HTML-ul este puțin mai mare, dar neglijabil pentru text.
-
-1.5. Drag & Drop Reordering (Sortable.js)
-Scop: Utilizatorul vrea să își prioritizeze vizual joburile.
-
-Tehnologie: Librăria Sortable.js.
-
-Persistență: Doar mutarea vizuală nu este suficientă. La finalul mutării (onEnd), declanșăm un fetch (POST) către endpoint-ul /jobs/reorder cu noua listă de ID-uri.
-
-Snippet:
-
-JavaScript
-
-onEnd: function (evt) {
-    // Colectează ordinea nouă a ID-urilor
-    rows.forEach(row => ids.push(row.getAttribute('data-id')));
-    // Trimite la server fără refresh
-    fetch('/jobs/reorder', { body: JSON.stringify(ids) ... });
-}
-2. Formularul de Adăugare/Editare (job-form.html)
-Pagina de formular este construită pentru a gestiona atât crearea ("Add New") cât și modificarea ("Edit") folosind același fișier HTML.
-
-2.1. Form Binding & Validation
-Thymeleaf Object: <form th:object="${job}"> leagă formularul de obiectul Java.
-
-Input Hidden ID: <input type="hidden" th:field="*{id}" /> este crucial. Dacă ID-ul există, Spring știe să facă Update. Dacă e null, face Insert.
-
-Feedback Erori:
-
-HTML
-
-<input type="text" th:field="*{jobTitle}" class="form-control" />
-<small th:if="${#fields.hasErrors('jobTitle')}" th:errors="*{jobTitle}" style="color: var(--danger-color);"></small>
-Dacă validarea @NotBlank din Java eșuează, Spring retrimite pagina, iar th:if afișează automat mesajul de eroare sub câmpul problematic.
-
-2.2. Dropdown Dinamic din Enum
-O tehnică avansată Thymeleaf pentru a nu hardcoda opțiunile "APLICAT", "INTERVIU...", etc. în HTML.
-
-HTML
-
-<option th:each="s : ${T(com.jobhunter.job_hunter.model.ApplicationStatus).values()}"
-        th:value="${s}" 
-        th:text="${s}"></option>
-Explicație: T(...) permite accesarea claselor Java statice direct din HTML. Astfel, dacă adaugi un status nou în Java (ApplicationStatus.java), acesta apare automat în dropdown fără a modifica HTML-ul.
-
-3. UX & Interactivitate Globală
-3.1. Dark Mode System
-Am implementat un sistem de teme robust care ține minte preferința utilizatorului.
-
-CSS Variables: Toate culorile sunt definite prin variabile (ex: --bg-card).
-
-HTML Attribute: Tema curentă este stocată în <html data-theme="dark">.
-
-Local Storage:
-
-La încărcare: Scriptul citește localStorage.getItem('theme').
-
-La click: Scriptul schimbă atributul și salvează noua valoare.
-
-Icon Management: Funcția updateIcon(theme) schimbă dinamic textul butonului între ☼ și ☾.
-
-3.2. Filtrare și Căutare
-Formularul de filtrare folosește metoda GET.
-
-Selectarea unei opțiuni din dropdown declanșează onchange="this.form.submit()".
-
-Aceasta reîncarcă pagina cu parametrii în URL: /jobs?statusFilter=RESPINS.
-
-De ce GET? Permite utilizatorului să dea Bookmark la o căutare specifică (ex: "Toate interviurile la Google").
-
-
-## Concluzie si Dezvoltari Ulterioare
-
-Aplicatia Job Hunter demonstreaza cum Spring Boot poate transforma o aplicatie CRUD banala intr-un instrument analitic util. Prin utilizarea validarilor, a Stream-urilor Java si a unei arhitecturi curate, rezultatul este un cod usor de intretinut si extensibil.
-
-Planuri de viitor:
-
-- adaugarea autentificarii (Spring Security)
-
-- incarcarea CV-urilor (file upload)
-
-- trimiterea automata de emailuri de follow-up
+Aplicația va fi disponibilă la `http://localhost:8080/jobs`.

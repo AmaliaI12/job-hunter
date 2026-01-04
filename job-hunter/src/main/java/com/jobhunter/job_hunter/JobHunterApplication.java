@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /** Clasa principala pentru pornirea aplicatiei Job Hunter
  * @author Ionescu Amalia
- * @version 10 Decembrie 2025
+ * @version 4 Ianuarie 2026
  */
 @SpringBootApplication
 public class JobHunterApplication {

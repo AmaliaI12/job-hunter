@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 /** Clasa Service pentru logica de business
  * @author Ionescu Amalia
- * @version 10 Decembrie 2025
+ * @version 4 Ianuarie 2026
  */
 @Service
 public class JobApplicationService {

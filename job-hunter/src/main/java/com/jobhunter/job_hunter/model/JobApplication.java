@@ -8,7 +8,7 @@ import java.time.temporal.ChronoUnit;
 
 /** Clasa pentru definirea JobApplication
  * @author Ionescu Amalia
- * @version 10 Decembrie 2025
+ * @version 4 Ianuarie 2026
  */
 @Entity
 @Table(name = "JobsTable")
